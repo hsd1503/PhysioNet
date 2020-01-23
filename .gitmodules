@@ -1,0 +1,3 @@
+[submodule "resnet1d"]
+	path = resnet1d
+	url = https://github.com/hsd1503/resnet1d
