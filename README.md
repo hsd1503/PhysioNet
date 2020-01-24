@@ -1,7 +1,11 @@
 # PhysioNet
 PhysioNet data and deep model.
 
-The task is classify ECG heart beats into 5 classes: N, S, V, F, Q
+# Task
+
+(1) Classify ECG heart beats into 5 classes: N, S, V, F, Q
+
+(2) Classify ECG heart beats into 2 classes: V, non-V (need manually modify test_mitdb.label2index)
 
 # Usage
 ```
