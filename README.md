@@ -1,5 +1,8 @@
 # PhysioNet
-PhysioNet data and deep model.
+
+This repo contains MIT-BIH data preprocessing and a sample deep model.
+
+The original data can be found at https://physionet.org/content/nsrdb/1.0.0/ 
 
 # Task
 
