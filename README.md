@@ -25,6 +25,9 @@ python test_mitdb.py
 # Label Description
 
 ## (1) Beat Level
+
+ANSI/AAMI EC57: 2012 Testing and reporting performance results of cardiac rhythm and ST segment measurement algorithms, page 8
+
 | Code | Group | Description                                                                       | 中文                                                                                                       |
 |------|-------|-----------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
 | N    | N     | Normal beat (displayed as"·" by the PhysioBank ATM, LightWAVE, pschart, and psfd) | 正常                                                                                                       |
