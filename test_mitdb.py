@@ -10,6 +10,8 @@ from tqdm import tqdm
 from matplotlib import pyplot as plt
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn import preprocessing
+import os
+from imblearn.over_sampling import RandomOverSampler
 
 import torch
 import torch.nn as nn
@@ -18,162 +20,82 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from torchsummaryX import summary
 
+from resnet1d.resnet1d import MyDataset, ResNet1D
+
 def label2index(i):
-    m = {'N':0, 'S':1, 'V':2, 'F':3, 'Q':4}
+    m = {'N':0, 'S':1, 'V':2, 'F':3, 'Q':4} # uncomment for 5 classes
+    # m = {'N':0, 'S':0, 'V':1, 'F':0, 'Q':0} # uncomment for 2 classes
     return m[i]
 
-class MyDataset(Dataset):
-    def __init__(self, data, label):
-        self.data = data
-        self.label = label
-
-    def __getitem__(self, index):
-        return (torch.tensor(self.data[index], dtype=torch.float), torch.tensor(self.label[index], dtype=torch.long))
-
-    def __len__(self):
-        return len(self.data)
-
-class CNN(nn.Module):
-    """
-    
-    Input:
-        X: (n_samples, n_channel, n_length)
-        Y: (n_samples)
-        
-    Output:
-        out: (n_samples)
-        
-    Pararmetes:
-        n_classes: number of classes
-        
-    """
-
-    def __init__(self, in_channels, out_channels, n_classes):
-        super(CNN, self).__init__()
-        
-        self.n_classes = n_classes
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-
-        # (batch, channels, length)
-        self.cnn1 = nn.Conv1d(in_channels=self.in_channels, 
-                            out_channels=self.out_channels, 
-                            kernel_size=16, 
-                            stride=2)
-        self.cnn2 = nn.Conv1d(in_channels=self.out_channels, 
-                            out_channels=self.out_channels, 
-                            kernel_size=16, 
-                            stride=2)
-        self.cnn3 = nn.Conv1d(in_channels=self.out_channels, 
-                            out_channels=self.out_channels, 
-                            kernel_size=16, 
-                            stride=2)
-        
-        self.bn1 = nn.BatchNorm1d(out_channels)
-        self.relu1 = nn.ReLU()
-        self.do1 = nn.Dropout(p=0.5)
-        self.pool1 = nn.MaxPool1d(2)
-        self.bn2 = nn.BatchNorm1d(out_channels)
-        self.relu2 = nn.ReLU()
-        self.do2 = nn.Dropout(p=0.5)
-        self.pool2 = nn.MaxPool1d(2)
-        self.bn3 = nn.BatchNorm1d(out_channels)
-        self.relu3 = nn.ReLU()
-        self.do3 = nn.Dropout(p=0.5)    
-        self.pool3 = nn.MaxPool1d(2)    
-        
-        self.dense = nn.Linear(out_channels, n_classes)
-        
-    def forward(self, x):
-        out = x
-        
-        out = self.cnn1(out)
-        out = self.pool1(out)
-        out = self.bn1(out)
-        out = self.relu1(out)
-        out = self.do1(out)
-        
-        out = self.cnn2(out)
-        out = self.pool2(out)
-        out = self.bn2(out)
-        out = self.relu2(out)
-        out = self.do2(out)
-        
-#         out = self.cnn3(out)
-#         out = self.pool3(out)
-#         out = self.bn3(out)
-#         out = self.relu3(out)
-#         out = self.do3(out)
-        
-        out = out.mean(-1)
-        out = self.dense(out)
-
-        return out
-    
-def resample(data, label):
-    out_data = []
-    out_label = []
-    for i in range(len(label)):
-        if label[i] == 0:
-            if np.random.rand() > 0.9:
-                out_data.append(data[i])
-                out_label.append(label[i])
-        else:
-            out_data.append(data[i])
-            out_label.append(label[i])
-    return np.array(out_data), np.array(out_label)
-    
-    
 if __name__ == "__main__":
 
-    batch_size = 4096
+    batch_size = 256
+    path = 'data/'
 
-    # make data
+    # read data
     print('start')
-    data = np.load('data/mitdb_data.npy')
-    data = preprocessing.scale(data, axis=1)
-    print(data.shape)
+    data = np.load(os.path.join(path, 'mitdb_data.npy'))
+    label_str = np.load(os.path.join(path, 'mitdb_group.npy'))
+    label = np.array([label2index(i) for i in label_str])
     
-    label_str = np.load('data/mitdb_label.npy')
-    pid = np.load('data/mitdb_pid.npy')
-    label = []
-    for i in label_str:
-        label.append(label2index(i))
-    label = np.array(label)
-    cnter = Counter(label)
-    print(cnter)
-    data, label = resample(data, label)
-    cnter = Counter(label)
-    print(cnter)
-    weight = torch.Tensor([1, cnter[0]/cnter[1], cnter[0]/cnter[2], cnter[0]/cnter[3], cnter[0]/cnter[4]])
-    print(weight)
-    data = np.expand_dims(data, 1)
-
-    # split train/val/test by pid, notice to avoid overlapping
-    X_train, X_test, Y_train, Y_test = data, data, label, label
-    print(X_train.shape, Y_train.shape)
+    # make data
+    train_ind = np.load(os.path.join(path, 'mitdb_train_ind.npy'))
+    test_ind = np.load(os.path.join(path, 'mitdb_test_ind.npy'))
+    data = preprocessing.scale(data, axis=1)
+    X_train = data[train_ind]
+    X_test = data[test_ind]
+    Y_train = label[train_ind]
+    Y_test = label[test_ind]
+    print(X_train.shape, Counter(Y_train))
+    print(X_test.shape, Counter(Y_test))
+    ros = RandomOverSampler(random_state=0)
+    X_train, Y_train = ros.fit_resample(X_train, Y_train)
+    print(X_train.shape, Counter(Y_train))
+    print(np.max(X_train), np.min(X_train))
+    # for i in range(20):
+    #     plt.figure()
+    #     idx = np.random.randint(X_train.shape[0])
+    #     title = '{}_{}'.format(Y_train[idx], idx)
+    #     plt.plot(X_train[idx])
+    #     plt.title(title)
+    #     plt.savefig('img/{0}.png'.format(title))
+    # exit()
+    
+    # prepare loader
+    shuffle_idx = np.random.permutation(list(range(X_train.shape[0])))
+    X_train = X_train[shuffle_idx]
+    Y_train = Y_train[shuffle_idx]
+    X_train = np.expand_dims(X_train, 1)
+    X_test = np.expand_dims(X_test, 1)
     dataset = MyDataset(X_train, Y_train)
     dataset_test = MyDataset(X_test, Y_test)
-    dataloader = DataLoader(dataset, batch_size=batch_size, drop_last=False, shuffle=True)
-    dataloader_test = DataLoader(dataset_test, batch_size=batch_size, drop_last=False, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=batch_size, drop_last=False, shuffle=False)
+    dataloader_test = DataLoader(dataset_test, batch_size=batch_size, drop_last=False, shuffle=False)
     
     # make model
-    device_str = "cuda"
+    device_str = "cuda:5"
     device = torch.device(device_str if torch.cuda.is_available() else "cpu")
     print(device)
-    model = CNN(
+    model = ResNet1D(
         in_channels=1, 
-        out_channels=64, 
-        n_classes=5)
-    model.to(device)
+        base_filters=128, 
+        kernel_size=16, 
+        stride=2, 
+        groups=8, 
+        n_block=8, 
+        n_classes=len(np.unique(Y_train)), 
+        downsample_gap=2, 
+        increasefilter_gap=4, 
+        use_do=False)
     summary(model, torch.zeros(1, 1, 360))
+    model.to(device)
 
     # train and test
     optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10)
-    loss_func = torch.nn.CrossEntropyLoss(weight=weight)
+    loss_func = torch.nn.CrossEntropyLoss()
 
-    n_epoch = 200
+    n_epoch = 30
     step = 0
     prev_f1 = 0
     for _ in tqdm(range(n_epoch), desc="epoch", leave=False):
@@ -181,33 +103,39 @@ if __name__ == "__main__":
         # train
         model.train()
         prog_iter = tqdm(dataloader, desc="Training", leave=False)
+        all_pred_prob_train = []
         for batch_idx, batch in enumerate(prog_iter):
-
+            model.train()
             input_x, input_y = tuple(t.to(device) for t in batch)
             pred = model(input_x)
+            all_pred_prob_train.append(pred.cpu().data.numpy())
             loss = loss_func(pred, input_y)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             step += 1
-        
-        print(loss.item())
-        
+
+            # test
+            if batch_idx % 300 == 0:
+                print(loss.item())
+                model.eval()
+                prog_iter_test = tqdm(dataloader_test, desc="Testing", leave=False)
+                all_pred_prob = []
+                with torch.no_grad():
+                    for batch_idx, batch in enumerate(prog_iter_test):
+                        input_x, input_y = tuple(t.to(device) for t in batch)
+                        pred = model(input_x)
+                        all_pred_prob.append(pred.cpu().data.numpy())
+                all_pred_prob = np.concatenate(all_pred_prob)
+                all_pred = np.argmax(all_pred_prob, axis=1)
+                print(classification_report(Y_test, all_pred))
+                print(confusion_matrix(Y_test, all_pred))
+
         scheduler.step(_)
-                    
-        # test
-        model.eval()
-        prog_iter_test = tqdm(dataloader_test, desc="Testing", leave=False)
-        all_pred_prob = []
-        with torch.no_grad():
-            for batch_idx, batch in enumerate(prog_iter_test):
-                input_x, input_y = tuple(t.to(device) for t in batch)
-                pred = model(input_x)
-                all_pred_prob.append(pred.cpu().data.numpy())
-        all_pred_prob = np.concatenate(all_pred_prob)
-        all_pred = np.argmax(all_pred_prob, axis=1)
+        all_pred_prob_train = np.concatenate(all_pred_prob_train)
+        all_pred_train = np.argmax(all_pred_prob_train, axis=1)
+        print(classification_report(Y_train, all_pred_train))
+        print(confusion_matrix(Y_train, all_pred_train))
         
-        ## classification report
-        print(classification_report(Y_test, all_pred))
-        print(confusion_matrix(Y_test, all_pred))
+
 
