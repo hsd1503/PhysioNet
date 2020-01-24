@@ -1,6 +1,19 @@
 # PhysioNet
-PhysioNet data and deep model
+PhysioNet data and deep model.
 
+The task is classify ECG heart beats into 5 classes: N, S, V, F, Q
+
+# Usage
+```
+# (1) unzip raw data
+unzip data/mit-bih-arrhythmia-database-1.0.0.zip
+
+# (2) preprocess to get npy
+python preprocess.py
+
+# (3) train
+python test_mitdb.py
+```
 
 # Label Description
 
