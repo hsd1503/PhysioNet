@@ -26,7 +26,7 @@ python test_mitdb.py
 
 ## (1) Beat Level
 
-ANSI/AAMI EC57: 2012 Testing and reporting performance results of cardiac rhythm and ST segment measurement algorithms, page 8
+The label-group map is used from ANSI/AAMI EC57: 2012 Testing and reporting performance results of cardiac rhythm and ST segment measurement algorithms, page 8
 
 | Code | Group | Description                                                                       | 中文                                                                                                       |
 |------|-------|-----------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
