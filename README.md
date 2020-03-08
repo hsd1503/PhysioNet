@@ -1,5 +1,8 @@
 # PhysioNet
-PhysioNet data and deep model.
+
+This repo contains MIT-BIH data preprocessing and a sample deep model.
+
+The original data can be found at https://physionet.org/content/mitdb/1.0.0/
 
 # Task
 
@@ -22,6 +25,9 @@ python test_mitdb.py
 # Label Description
 
 ## (1) Beat Level
+
+The label-group map is used from ANSI/AAMI EC57: 2012 Testing and reporting performance results of cardiac rhythm and ST segment measurement algorithms, page 8
+
 | Code | Group | Description                                                                       | 中文                                                                                                       |
 |------|-------|-----------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|
 | N    | N     | Normal beat (displayed as"·" by the PhysioBank ATM, LightWAVE, pschart, and psfd) | 正常                                                                                                       |
